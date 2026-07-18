@@ -534,7 +534,8 @@ function savePPRE(studentId, content) {
     duration: data.duration,
     status: 'actif',
     createdAt: today(),
-    updatedAt: today()
+    updatedAt: today(),
+    bilan: null
   }
   state.ppres.push(ppre)
   LSS('ppres', state.ppres)
@@ -560,7 +561,39 @@ function renderPPREdit(id) {
         <button class="btn btn-danger btn-sm" onclick="deletePPRE('${p.id}')">🗑</button>
       </div>
     </div>
-    <div class="card markdown-content">${renderMarkdown(p.content)}</div>`
+    <div class="card markdown-content" style="margin-bottom:1rem">${renderMarkdown(p.content)}</div>
+    
+    <!-- BILAN -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3 style="font-size:1rem;font-weight:600;display:flex;align-items:center;gap:.5rem">
+          📋 Bilan
+          ${p.status === 'terminé' ? '<span class="badge badge-blue">Terminé</span>' : p.bilan ? '<span class="badge badge-green">Évalué</span>' : '<span class="badge badge-yellow">En cours</span>'}
+        </h3>
+        ${p.status !== 'terminé' ? `<button class="btn btn-primary btn-sm" onclick="showBilanForm('${p.id}')">${p.bilan ? '✎ Mettre à jour' : '📝 Faire le bilan'}</button>` : ''}
+      </div>
+      ${p.bilan ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem">
+          <div style="background:#f8fafc;border-radius:8px;padding:.75rem">
+            <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b">Date du bilan</div>
+            <div style="font-weight:600;margin-top:.15rem">${fmtDate(p.bilan.date)}</div>
+          </div>
+          <div style="background:#f8fafc;border-radius:8px;padding:.75rem">
+            <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b">Décision</div>
+            <div style="font-weight:600;margin-top:.15rem">${p.bilan.decision}</div>
+          </div>
+        </div>
+        <div style="background:#f8fafc;border-radius:8px;padding:.75rem;margin-bottom:1rem">
+          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:.3rem">Observations</div>
+          <div style="font-size:.875rem;color:#1e293b;line-height:1.5;white-space:pre-wrap">${escHtml(p.bilan.observations || 'Aucune observation')}</div>
+        </div>
+        ${p.bilan.objectifs ? `
+        <div style="background:#f8fafc;border-radius:8px;padding:.75rem">
+          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:.3rem">Objectifs atteints</div>
+          <div style="font-size:.875rem;color:#1e293b">${escHtml(p.bilan.objectifs)}</div>
+        </div>` : ''}
+      ` : '<p style="color:#94a3b8;font-size:.875rem;text-align:center;padding:1rem">Aucun bilan renseigné pour le moment.</p>'}
+    </div>`
 }
 
 function editPPRE(id) {
@@ -731,6 +764,65 @@ function renderMarkdown(text) {
   // Single newlines
   h = h.replace(/\n/g, '<br>')
   return '<p style="margin:.6rem 0">'+h+'</p>'
+}
+
+// ================================ BILAN ================================
+function showBilanForm(ppreId) {
+  const p = state.ppres.find(x => x.id === ppreId)
+  if (!p) return
+  const overlay = document.createElement('div')
+  overlay.className = 'modal-overlay'
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem">📋 Bilan du PPRE</h2>
+      <div style="display:grid;gap:1rem">
+        <div><label>Date du bilan</label><input type="date" id="bilan-date" value="${p.bilan?.date || today()}"></div>
+        <div><label>Décision</label>
+          <select id="bilan-decision">
+            <option value="À poursuivre" ${p.bilan?.decision === 'À poursuivre' ? 'selected' : ''}>À poursuivre</option>
+            <option value="Objectifs atteints" ${p.bilan?.decision === 'Objectifs atteints' ? 'selected' : ''}>Objectifs atteints</option>
+            <option value="Partiellement atteints" ${p.bilan?.decision === 'Partiellement atteints' ? 'selected' : ''}>Partiellement atteints</option>
+            <option value="À réorienter" ${p.bilan?.decision === 'À réorienter' ? 'selected' : ''}>À réorienter</option>
+            <option value="Sans suite" ${p.bilan?.decision === 'Sans suite' ? 'selected' : ''}>Sans suite</option>
+          </select>
+        </div>
+        <div><label>Objectifs atteints</label><textarea id="bilan-objectifs" rows="2" placeholder="Quels objectifs ont été atteints ?">${p.bilan?.objectifs || ''}</textarea></div>
+        <div><label>Observations / Remarques</label><textarea id="bilan-obs" rows="4" placeholder="Bilan général, points à retravailler, évolution de l'élève…">${p.bilan?.observations || ''}</textarea></div>
+        <div>
+          <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+            <input type="checkbox" id="bilan-terminer" ${p.status === 'terminé' ? 'checked' : ''}>
+            <span>Clôturer le PPRE (passer en "Terminé")</span>
+          </label>
+        </div>
+      </div>
+      <div style="display:flex;gap:.75rem;margin-top:1.5rem">
+        <button class="btn btn-primary" style="flex:1" onclick="saveBilan('${ppreId}')">💾 Enregistrer le bilan</button>
+        <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+      </div>
+    </div>`
+  document.body.appendChild(overlay)
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove() })
+}
+
+function saveBilan(ppreId) {
+  const idx = state.ppres.findIndex(p => p.id === ppreId)
+  if (idx < 0) return
+  
+  const decision = document.getElementById('bilan-decision')?.value || 'À poursuivre'
+  const terminer = document.getElementById('bilan-terminer')?.checked || false
+  
+  state.ppres[idx].bilan = {
+    date: document.getElementById('bilan-date')?.value || today(),
+    decision,
+    objectifs: document.getElementById('bilan-objectifs')?.value.trim() || '',
+    observations: document.getElementById('bilan-obs')?.value.trim() || ''
+  }
+  state.ppres[idx].status = terminer ? 'terminé' : 'actif'
+  state.ppres[idx].updatedAt = today()
+  LSS('ppres', state.ppres)
+  document.querySelector('.modal-overlay')?.remove()
+  toast(terminer ? '✅ PPRE clôturé' : '✅ Bilan enregistré')
+  render()
 }
 
 // ================================ PDF EXPORT ================================
