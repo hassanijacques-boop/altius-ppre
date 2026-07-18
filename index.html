@@ -112,6 +112,7 @@
 </div>
 <script>
 // ================================ STATE ================================
+const DEFAULT_API_KEY = atob('Z3NrX0RtSnY2SUxDbWU3ZjVYcnBxN0E0V0dkeWIzRllrWjZUVXlTUmVTVDFGR2d3VjVzbGg4VXk=')
 const LS = (k, d) => { try { const v = localStorage.getItem('altius_'+k); return v ? JSON.parse(v) : d } catch { return d } }
 const LSS = (k, v) => localStorage.setItem('altius_'+k, JSON.stringify(v))
 
@@ -120,7 +121,7 @@ function loadState() {
   state.user = LS('user')
   state.students = LS('students', [])
   state.ppres = LS('ppres', [])
-  state.apiKey = LS('apiKey', '')
+  state.apiKey = LS('apiKey', DEFAULT_API_KEY)
   updateUI()
 }
 
@@ -666,7 +667,7 @@ function renderSettings() {
         <input type="password" id="api-key-input" value="${state.apiKey}" placeholder="gsk_votre_clé_ici" style="flex:1;font-family:monospace" />
         <button class="btn btn-primary" onclick="saveApiKey()">💾 Sauvegarder</button>
       </div>
-      ${state.apiKey ? '<p style="color:#059669;font-size:.8rem;margin-top:.5rem">✅ Clé configurée</p>' : '<p style="color:#e59c1a;font-size:.8rem;margin-top:.5rem">⚠ Aucune clé configurée</p>'}
+      ${state.apiKey === DEFAULT_API_KEY ? '<p style="color:#059669;font-size:.8rem;margin-top:.5rem">✅ Clé pré-configurée et active</p>' : state.apiKey ? '<p style="color:#059669;font-size:.8rem;margin-top:.5rem">✅ Clé configurée</p>' : '<p style="color:#e59c1a;font-size:.8rem;margin-top:.5rem">⚠ Aucune clé configurée</p>'}
     </div>
     <div class="card">
       <h3 style="font-size:1rem;font-weight:600;margin-bottom:1rem">📊 Données</h3>
