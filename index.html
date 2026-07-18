@@ -141,6 +141,15 @@ function navigate(page, data) {
   render()
 }
 
+// Sidebar navigation
+document.addEventListener('click', function(e) {
+  const link = e.target.closest('.sidebar a[data-page]')
+  if (link) {
+    e.preventDefault()
+    navigate(link.dataset.page)
+  }
+})
+
 function getRoute() {
   const hash = window.location.hash.slice(1) || 'dashboard'
   const parts = hash.split('/')
