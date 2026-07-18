@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Altius PPRE — Programme Personnalisé de Réussite Éducative</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: { 50:'#eef3fc',100:'#d4e2f7',200:'#abc6ef',300:'#7aa8e6',400:'#4d8adb',500:'#2b6cc9',600:'#1a56b0',700:'#0f3d7a',800:'#0a2a54',900:'#061833',950:'#030d1f' },
+            gold:  { 50:'#fef8e7',100:'#fceebf',200:'#f9df8a',300:'#f5c847',400:'#f0b429',500:'#e59c1a',600:'#c97a0a',700:'#a85a04',800:'#7e3f00',900:'#542800' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; }
+    .hidden { display: none !important; }
+    .card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); border: 1px solid #e2e8f0; }
+    .btn { padding: .5rem 1.25rem; border-radius: 8px; font-weight: 600; font-size: .875rem; cursor: pointer; transition: all .15s; border: none; display: inline-flex; align-items: center; gap: .5rem; }
+    .btn-primary { background: #1a56b0; color: white; }
+    .btn-primary:hover { background: #0f3d7a; }
+    .btn-gold { background: #e59c1a; color: white; }
+    .btn-gold:hover { background: #c97a0a; }
+    .btn-outline { background: transparent; border: 1.5px solid #cbd5e1; color: #475569; }
+    .btn-outline:hover { border-color: #1a56b0; color: #1a56b0; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-sm { padding: .35rem .85rem; font-size: .8rem; }
+    .btn-lg { padding: .75rem 1.75rem; font-size: 1rem; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    input, select, textarea { width: 100%; padding: .6rem .85rem; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: .9rem; transition: border .15s; outline: none; background: white; }
+    input:focus, select:focus, textarea:focus { border-color: #1a56b0; box-shadow: 0 0 0 3px rgba(26,86,176,.1); }
+    label { display: block; font-size: .8rem; font-weight: 600; color: #475569; margin-bottom: .35rem; }
+    .badge { display: inline-flex; padding: .15rem .65rem; border-radius: 999px; font-size: .7rem; font-weight: 600; }
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-yellow { background: #fef9c3; color: #854d0e; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: .85rem 1.25rem; border-radius: 10px; color: white; font-weight: 500; z-index: 9999; animation: slideIn .3s ease; max-width: 380px; }
+    .toast-success { background: #059669; }
+    .toast-error { background: #dc2626; }
+    .toast-info { background: #1a56b0; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .spinner { width: 20px; height: 20px; border: 2.5px solid #e2e8f0; border-top-color: #1a56b0; border-radius: 50%; animation: spin .6s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .modal-overlay { position: fixed; inset:0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal { background: white; border-radius: 16px; padding: 2rem; max-width: 520px; width: 90%; max-height: 85vh; overflow-y: auto; }
+    .sidebar { width: 240px; min-height: 100vh; background: #0a2a54; color: white; display: flex; flex-direction: column; }
+    .sidebar a { padding: .75rem 1.25rem; color: #94a3b8; text-decoration: none; display: flex; align-items: center; gap: .6rem; font-size: .875rem; border-left: 3px solid transparent; transition: all .15s; }
+    .sidebar a:hover, .sidebar a.active { color: white; background: rgba(255,255,255,.06); }
+    .sidebar a.active { border-left-color: #f5c847; color: #f5c847; }
+    .main-content { flex:1; padding: 2rem; max-width: 1100px; }
+    .page-header { margin-bottom: 1.5rem; }
+    .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+    .page-header p { font-size: .875rem; color: #64748b; margin-top: .25rem; }
+    .stat-card { background: white; border-radius: 12px; padding: 1.25rem; border: 1px solid #e2e8f0; }
+    .stat-card .label { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+    .stat-card .value { font-size: 1.75rem; font-weight: 700; color: #0f172a; margin-top: .25rem; }
+    .ai-badge { background: linear-gradient(135deg, #7c3aed, #2563eb); color: white; font-size: .65rem; padding: .15rem .5rem; border-radius: 999px; display: inline-flex; align-items: center; gap: .25rem; }
+    .empty-state { text-align: center; padding: 3rem 1rem; color: #94a3b8; }
+    .empty-state svg { margin: 0 auto 1rem; }
+    @media (max-width: 768px) { .sidebar { width: 100%; min-height: auto; flex-direction: row; overflow-x: auto; } .sidebar a { white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; } .sidebar a.active { border-bottom-color: #f5c847; border-left-color: transparent; } .main-content { padding: 1rem; } }
+    .markdown-content { line-height: 1.7; }
+    .markdown-content h3 { font-size: 1.05rem; font-weight: 600; margin: 1rem 0 .4rem; color: #0f172a; }
+    .markdown-content ul { padding-left: 1.25rem; margin: .4rem 0; }
+    .markdown-content li { margin-bottom: .25rem; }
+  </style>
+</head>
+<body>
+<div id="app" class="flex flex-col md:flex-row">
+  <!-- Sidebar -->
+  <nav id="sidebar" class="sidebar hidden md:flex">
+    <div style="padding:1.25rem;font-weight:700;font-size:1.1rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid rgba(255,255,255,.08)">
+      <span style="color:#f5c847">▲</span> Altius PPRE
+    </div>
+    <div style="flex:1;padding:.5rem 0">
+      <a href="#" data-page="dashboard" class="active"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg> Tableau de bord</a>
+      <a href="#" data-page="students"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Élèves</a>
+      <a href="#" data-page="vademecum"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Vademecum</a>
+      <a href="#" data-page="history"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Historique</a>
+      <a href="#" data-page="settings"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg> Réglages</a>
+    </div>
+    <div style="padding:.75rem 1.25rem;border-top:1px solid rgba(255,255,255,.08);font-size:.75rem;color:#64748b">
+      <div id="sidebar-user"></div>
+      <a href="#" onclick="logout()" style="display:inline-flex;align-items:center;gap:.3rem;color:#ef4444;margin-top:.3rem;padding:0;border:none;font-size:.8rem">Déconnexion</a>
+    </div>
+  </nav>
+
+  <!-- Mobile top bar -->
+  <div id="mobile-topbar" class="flex md:hidden items-center justify-between p-3 bg-white border-b shadow-sm" style="position:sticky;top:0;z-index:100">
+    <button onclick="toggleMobileMenu()" class="btn btn-outline btn-sm">☰</button>
+    <span style="font-weight:700;color:#0a2a54">▲ Altius PPRE</span>
+    <span style="font-size:.75rem;color:#64748b" id="mobile-user"></span>
+  </div>
+
+  <!-- Main content -->
+  <main id="main-content" class="main-content" style="width:100%"></main>
+</div>
+<script>
+// ================================ STATE ================================
+const LS = (k, d) => { try { const v = localStorage.getItem('altius_'+k); return v ? JSON.parse(v) : d } catch { return d } }
+const LSS = (k, v) => localStorage.setItem('altius_'+k, JSON.stringify(v))
+
+let state = { user: null, students: [], ppres: [], apiKey: '' }
+function loadState() {
+  state.user = LS('user')
+  state.students = LS('students', [])
+  state.ppres = LS('ppres', [])
+  state.apiKey = LS('apiKey', '')
+  updateUI()
+}
+
+// ================================ TOAST ================================
+function toast(msg, type='success') {
+  const t = document.createElement('div')
+  t.className = 'toast toast-'+type
+  t.textContent = msg
+  document.body.appendChild(t)
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300) }, 3000)
+}
+
+// ================================ ROUTING ================================
+let currentPage = 'dashboard'
+function navigate(page, data) {
+  currentPage = page
+  window.location.hash = page + (data ? '/'+data : '')
+  render()
+}
+
+function getRoute() {
+  const hash = window.location.hash.slice(1) || 'dashboard'
+  const parts = hash.split('/')
+  return { page: parts[0], param: parts.slice(1).join('/') }
+}
+
+// ================================ GENERATE ID ================================
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6) }
+
+// ================================ DATE ================================
+function today() { return new Date().toISOString().slice(0,10) }
+function fmtDate(d) { return new Date(d).toLocaleDateString('fr-FR', {day:'numeric',month:'short',year:'numeric'}) }
+
+// ================================ LOGIN / LOGOUT ================================
+function login(email) {
+  state.user = { email, name: email.split('@')[0] }
+  LSS('user', state.user)
+  updateUI()
+  navigate('dashboard')
+  toast('Bienvenue, '+state.user.name+' !')
+}
+
+function logout() {
+  state.user = null
+  LSS('user', null)
+  render()
+  updateUI()
+}
+
+function updateUI() {
+  document.getElementById('sidebar-user').textContent = state.user ? state.user.email : ''
+  document.getElementById('mobile-user').textContent = state.user ? state.user.name : ''
+}
+
+// ================================ GROQ API ================================
+async function callGroq(messages, model = 'deepseek-r1-distill-llama-70b') {
+  if (!state.apiKey) { toast('Configure ta clé API Groq dans Réglages', 'error'); return null }
+  try {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer '+state.apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages, temperature: .7, max_tokens: 4096 })
+    })
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message || 'Erreur API') }
+    const data = await resp.json()
+    return data.choices[0].message.content
+  } catch(e) { toast('Erreur Groq: '+e.message, 'error'); return null }
+}
+
+// ================================ RENDER ================================
+function render() {
+  if (!state.user) { renderLogin(); return }
+  const { page, param } = getRoute()
+  const sidebarLinks = document.querySelectorAll('.sidebar a[data-page]')
+  sidebarLinks.forEach(a => { a.classList.toggle('active', a.dataset.page === page) })
+  
+  switch(page) {
+    case 'dashboard': renderDashboard(); break
+    case 'students': renderStudents(); break
+    case 'student': renderStudentDetail(param); break
+    case 'ppre-new': renderPPRENew(param); break
+    case 'ppre': renderPPREdit(param); break
+    case 'history': renderHistory(); break
+    case 'vademecum': renderVademecum(); break
+    case 'settings': renderSettings(); break
+    default: renderDashboard()
+  }
+}
+
+// ================================ LOGIN PAGE ================================
+function renderLogin() {
+  document.getElementById('sidebar').classList.add('hidden')
+  document.getElementById('mobile-topbar').classList.add('hidden')
+  document.getElementById('main-content').innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a2a54,#061833)">
+      <div class="card" style="max-width:400px;width:100%;padding:2.5rem">
+        <div style="text-align:center;margin-bottom:1.5rem">
+          <div style="font-size:2.5rem;color:#e59c1a;font-weight:800">▲</div>
+          <h1 style="font-size:1.5rem;font-weight:700;color:#0f172a;margin-top:.5rem">Altius PPRE</h1>
+          <p style="color:#64748b;font-size:.85rem;margin-top:.25rem">Programme Personnalisé de Réussite Éducative</p>
+        </div>
+        <div class="mb-4">
+          <label>Email professionnel</label>
+          <input type="email" id="login-email" placeholder="prenom.nom@ac-mayotte.fr" value="jacques.hassani-moustoifa@ac-mayotte.fr" autofocus />
+        </div>
+        <button class="btn btn-primary btn-lg" style="width:100%" onclick="handleLogin()">Accéder</button>
+        <p style="text-align:center;margin-top:1rem;font-size:.8rem;color:#94a3b8">Accès gratuit — aucune donnée envoyée à un serveur</p>
+      </div>
+    </div>`
+}
+
+function handleLogin() {
+  const email = document.getElementById('login-email')?.value.trim()
+  if (!email || !email.includes('@')) { toast('Email invalide', 'error'); return }
+  login(email)
+  document.getElementById('sidebar').classList.remove('hidden')
+  document.getElementById('mobile-topbar').classList.remove('hidden')
+}
+
+// ================================ DASHBOARD ================================
+function renderDashboard() {
+  const students = state.students
+  const ppres = state.ppres
+  const active = ppres.filter(p => p.status === 'actif').length
+  const thisMonth = ppres.filter(p => p.createdAt?.startsWith(today().slice(0,7))).length
+  
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <h1>Tableau de bord</h1>
+      <p>Bienvenue, ${state.user.name} · ${students.length} élève${students.length > 1 ? 's' : ''} · ${ppres.length} PPRE rédigé${ppres.length > 1 ? 's' : ''}</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem">
+      <div class="stat-card"><div class="label">Élèves</div><div class="value">${students.length}</div></div>
+      <div class="stat-card"><div class="label">PPRE actifs</div><div class="value">${active}</div></div>
+      <div class="stat-card"><div class="label">Ce mois-ci</div><div class="value">${thisMonth}</div></div>
+      <div class="stat-card"><div class="label">Total PPRE</div><div class="value">${ppres.length}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div class="card">
+        <h3 style="font-size:1rem;font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem">📋 Derniers PPRE</h3>
+        ${ppres.length === 0 ? '<div class="empty-state"><p>Aucun PPRE pour le moment</p><button class="btn btn-primary btn-sm" onclick="navigate(\'students\')" style="margin-top:1rem">Ajouter un élève</button></div>' :
+          ppres.slice(-5).reverse().map(p => {
+            const s = state.students.find(st => st.id === p.studentId)
+            return `<div style="padding:.6rem 0;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+              <div><strong>${s ? s.name : '—'}</strong><br><span style="font-size:.8rem;color:#64748b">${fmtDate(p.createdAt)} · <span class="badge ${p.status === 'actif' ? 'badge-green' : 'badge-blue'}">${p.status}</span></span></div>
+              <button class="btn btn-outline btn-sm" onclick="navigate('ppre','${p.id}')">Voir</button>
+            </div>`
+          }).join('')
+        }
+      </div>
+      <div class="card">
+        <h3 style="font-size:1rem;font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem"><span class="ai-badge">✨ IA</span> Actions rapides</h3>
+        <div style="display:flex;flex-direction:column;gap:.6rem">
+          <button class="btn btn-primary" onclick="navigate('students')">👤 Gérer les élèves</button>
+          <button class="btn btn-gold" onclick="navigate('students')">📝 Nouveau PPRE</button>
+          <button class="btn btn-outline" onclick="navigate('vademecum')">📖 Consulter le Vademecum</button>
+          ${!state.apiKey ? `<button class="btn btn-outline" onclick="navigate('settings')" style="border-color:#e59c1a;color:#e59c1a">🔑 Configurer la clé API IA</button>` : ''}
+        </div>
+      </div>
+    </div>`
+}
+
+// ================================ STUDENTS ================================
+function renderStudents() {
+  const students = state.students
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:.5rem">
+      <div><h1>Élèves</h1><p>${students.length} élève${students.length > 1 ? 's' : ''} suivis</p></div>
+      <button class="btn btn-primary" onclick="showStudentModal()">+ Nouvel élève</button>
+    </div>
+    ${students.length === 0 ? '<div class="empty-state"><p style="font-size:1.1rem">Aucun élève pour le moment</p><p style="font-size:.85rem;margin-top:.3rem">Ajoute ton premier élève pour commencer</p></div>' :
+      `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem">${
+        students.map(s => {
+          const ppreCount = state.ppres.filter(p => p.studentId === s.id).length
+          return `<div class="card" style="cursor:pointer" onclick="navigate('student','${s.id}')">
+            <div style="display:flex;justify-content:space-between;align-items:start">
+              <div>
+                <strong style="font-size:1.05rem">${s.name}</strong>
+                <div style="font-size:.8rem;color:#64748b;margin-top:.15rem">${s.class || '—'} · ${s.level || '—'}</div>
+              </div>
+              <span class="badge badge-blue">${ppreCount} PPRE</span>
+            </div>
+            ${s.difficulties ? `<div style="margin-top:.5rem;font-size:.8rem;color:#64748b"><span style="color:#dc2626">⚠</span> ${s.difficulties.slice(0,80)}${s.difficulties.length > 80 ? '…' : ''}</div>` : ''}
+            <div style="margin-top:.75rem;display:flex;gap:.4rem">
+              <button class="btn btn-gold btn-sm" onclick="event.stopPropagation();navigate('ppre-new','${s.id}')">+ PPRE</button>
+              <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showStudentModal('${s.id}')">✎</button>
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteStudent('${s.id}')">🗑</button>
+            </div>
+          </div>`
+        }).join('')
+      }</div>`
+    }`
+}
+
+function showStudentModal(id) {
+  const s = id ? state.students.find(x => x.id === id) : null
+  const isEdit = !!s
+  const overlay = document.createElement('div')
+  overlay.className = 'modal-overlay'
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:1.25rem">${isEdit ? 'Modifier' : 'Nouvel'} élève</h2>
+      <div style="display:grid;gap:1rem">
+        <div><label>Nom et prénom *</label><input id="f-name" value="${isEdit ? escHtml(s.name) : ''}" placeholder="Ex: Ali Mohamed"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div><label>Classe</label><input id="f-class" value="${isEdit ? escHtml(s.class||'') : ''}" placeholder="Ex: 6ème A"></div>
+          <div><label>Niveau</label><select id="f-level">${['CP','CE1','CE2','CM1','CM2','6ème','5ème','4ème','3ème','SEGPA'].map(l => `<option ${isEdit && s.level === l ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        </div>
+        <div><label>Difficultés / Observations</label><textarea id="f-diff" rows="3" placeholder="Décris les difficultés de l'élève…">${isEdit ? escHtml(s.difficulties||'') : ''}</textarea></div>
+        <div><label>Points forts / Appuis</label><textarea id="f-strengths" rows="2" placeholder="Centres d'intérêt, points d'appui…">${isEdit ? escHtml(s.strengths||'') : ''}</textarea></div>
+      </div>
+      <div style="display:flex;gap:.75rem;margin-top:1.5rem">
+        <button class="btn btn-primary" style="flex:1" onclick="saveStudent('${id||''}')">${isEdit ? 'Enregistrer' : 'Ajouter'}</button>
+        <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+      </div>
+    </div>`
+  document.body.appendChild(overlay)
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove() })
+}
+
+function saveStudent(id) {
+  const name = document.getElementById('f-name')?.value.trim()
+  if (!name) { toast('Le nom est requis', 'error'); return }
+  const data = {
+    name,
+    class: document.getElementById('f-class')?.value.trim() || '',
+    level: document.getElementById('f-level')?.value || '',
+    difficulties: document.getElementById('f-diff')?.value.trim() || '',
+    strengths: document.getElementById('f-strengths')?.value.trim() || ''
+  }
+  if (id) {
+    const idx = state.students.findIndex(s => s.id === id)
+    if (idx >= 0) { state.students[idx] = { ...state.students[idx], ...data } }
+  } else {
+    data.id = uid()
+    data.createdAt = today()
+    state.students.push(data)
+  }
+  LSS('students', state.students)
+  document.querySelector('.modal-overlay')?.remove()
+  toast(id ? 'Élève modifié' : 'Élève ajouté')
+  render()
+}
+
+function deleteStudent(id) {
+  if (!confirm('Supprimer cet élève et tous ses PPRE ?')) return
+  state.students = state.students.filter(s => s.id !== id)
+  state.ppres = state.ppres.filter(p => p.studentId !== id)
+  LSS('students', state.students)
+  LSS('ppres', state.ppres)
+  toast('Élève supprimé')
+  render()
+}
+
+// ================================ STUDENT DETAIL ================================
+function renderStudentDetail(id) {
+  const s = state.students.find(x => x.id === id)
+  if (!s) { navigate('students'); return }
+  const ppres = state.ppres.filter(p => p.studentId === id)
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:.5rem">
+      <div>
+        <a href="#" onclick="navigate('students');return false" style="font-size:.8rem;color:#1a56b0;text-decoration:none">← Élèves</a>
+        <h1 style="margin-top:.25rem">${s.name}</h1>
+        <p>${s.class ? s.class+' · ' : ''}${s.level || ''} ${s.difficulties ? '· ⚠ '+s.difficulties.slice(0,60) : ''}</p>
+      </div>
+      <button class="btn btn-gold" onclick="navigate('ppre-new','${s.id}')">+ Nouveau PPRE</button>
+    </div>
+    ${ppres.length === 0 ? '<div class="empty-state"><p>Aucun PPRE pour cet élève</p><button class="btn btn-gold btn-sm" onclick="navigate(\'ppre-new\',\''+s.id+'\')" style="margin-top:.75rem">Créer un PPRE</button></div>' :
+      ppres.slice().reverse().map(p => {
+        const objCount = p.objectives ? p.objectives.length : 0
+        return `<div class="card" style="margin-bottom:.75rem;cursor:pointer" onclick="navigate('ppre','${p.id}')">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <strong style="font-size:1rem">PPRE du ${fmtDate(p.createdAt)}</strong>
+              <div style="font-size:.8rem;color:#64748b;margin-top:.15rem">${objCount} objectif${objCount > 1 ? 's' : ''} · <span class="badge ${p.status === 'actif' ? 'badge-green' : p.status === 'terminé' ? 'badge-blue' : 'badge-yellow'}">${p.status||'brouillon'}</span></div>
+            </div>
+            <button class="btn btn-outline btn-sm">Voir</button>
+          </div>
+          ${p.summary ? `<div style="margin-top:.5rem;font-size:.85rem;color:#475569;border-top:1px solid #f1f5f9;padding-top:.5rem">${escHtml(p.summary.slice(0,120))}${p.summary.length > 120 ? '…' : ''}</div>` : ''}
+        </div>`
+      }).join('')
+    }`
+}
+
+// ================================ PPRE NEW (WITH AI) ================================
+function renderPPRENew(studentId) {
+  const s = state.students.find(x => x.id === studentId)
+  if (!s) { navigate('students'); return }
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header">
+      <a href="#" onclick="navigate('student','${s.id}');return false" style="font-size:.8rem;color:#1a56b0;text-decoration:none">← ${s.name}</a>
+      <h1 style="margin-top:.25rem">Nouveau PPRE</h1>
+      <p>Programme Personnalisé de Réussite Éducative pour ${s.name} (${s.level || s.class || '—'})</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div class="card">
+        <h3 style="font-size:.95rem;font-weight:600;margin-bottom:1rem">📝 Informations</h3>
+        <div style="display:grid;gap:.85rem">
+          <div><label>Contexte / difficultés</label><textarea id="ppre-context" rows="4" placeholder="Décris la situation de l'élève, ses difficultés, le contexte…" style="font-size:.85rem">${s.difficulties || ''}</textarea></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+            <div><label>Matière(s) ciblée(s)</label><input id="ppre-subject" placeholder="Ex: français, maths"></div>
+            <div><label>Durée prévue</label><select id="ppre-duration"><option>6 semaines</option><option>8 semaines</option><option>12 semaines</option><option>Trimestre</option></select></div>
+          </div>
+          <div><label>Points d'appui</label><textarea id="ppre-strengths" rows="2" style="font-size:.85rem">${s.strengths || ''}</textarea></div>
+          <div><label>Objectifs visés</label><textarea id="ppre-goals" rows="2" placeholder="Ex: améliorer la lecture, consolider les tables…" style="font-size:.85rem"></textarea></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:.95rem;font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem"><span class="ai-badge">✨ IA</span> Génération assistée</h3>
+        <p style="font-size:.85rem;color:#64748b;margin-bottom:1rem">L'IA rédige un PPRE complet adapté au profil de l'élève. Tu pourras le modifier après génération.</p>
+        <button class="btn btn-gold btn-lg" style="width:100%" onclick="generatePPRE('${s.id}')" id="gen-btn">
+          ✨ Générer le PPRE avec l'IA
+        </button>
+        <div id="ppre-result" style="margin-top:1rem"></div>
+      </div>
+    </div>`
+}
+
+async function generatePPRE(studentId) {
+  const s = state.students.find(x => x.id === studentId)
+  if (!s) return
+  const btn = document.getElementById('gen-btn')
+  const resultDiv = document.getElementById('ppre-result')
+  if (!btn || !resultDiv) return
+  
+  const context = document.getElementById('ppre-context')?.value.trim() || s.difficulties || ''
+  const subject = document.getElementById('ppre-subject')?.value.trim() || ''
+  const strengths = document.getElementById('ppre-strengths')?.value.trim() || s.strengths || ''
+  const goals = document.getElementById('ppre-goals')?.value.trim() || ''
+  const duration = document.getElementById('ppre-duration')?.value || '6 semaines'
+  
+  if (!context && !subject) { toast('Décris au moins le contexte ou la matière', 'error'); return }
+  
+  btn.disabled = true
+  btn.innerHTML = '<span class="spinner"></span> Génération en cours…'
+  resultDiv.innerHTML = ''
+  
+  const prompt = `Tu es un enseignant spécialisé (SEGPA, RASED) qui rédige un PPRE (Programme Personnalisé de Réussite Éducative).
+
+Élève : ${s.name}
+Classe/Niveau : ${s.level || s.class || 'Non spécifié'}
+Difficultés : ${context || 'Non spécifiées'}
+Matière(s) ciblée(s) : ${subject || 'Non spécifiée'}
+Points d'appui : ${strengths || 'Non spécifiés'}
+Objectifs visés : ${goals || 'À définir'}
+Durée : ${duration}
+
+Rédige un PPRE complet au format suivant :
+
+**1. CONSTAT**
+Paragraphe décrivant la situation de l'élève, ses difficultés et ses besoins.
+
+**2. OBJECTIFS PRIORITAIRES**
+Liste de 3 à 5 objectifs concrets et mesurables pour la durée du PPRE.
+
+**3. ACTIVITÉS ET MODALITÉS**
+Pour chaque objectif, décris les activités prévues, les supports, la fréquence (quotidienne, hebdomadaire) et le mode d'accompagnement (individuel, atelier, tutorat…).
+
+**4. ÉVALUATION**
+Critères de réussite et modalités d'évaluation (bilan à mi-parcours, évaluation finale).
+
+**5. OBSERVATIONS**
+Conseils pour l'enseignant et l'élève : adaptations possibles, valorisation des progrès, communication avec la famille.
+
+Sois précis, concret et bienveillant. Utilise un langage professionnel mais accessible.`
+  
+  const result = await callGroq([
+    { role: 'system', content: 'Tu es un enseignement spécialisé expert en PPRE. Tu rédiges des programmes personnalisés clairs, concrets et bienveillants.' },
+    { role: 'user', content: prompt }
+  ])
+  
+  btn.disabled = false
+  btn.innerHTML = '✨ Régénérer avec l\'IA'
+  
+  if (!result) return
+  
+  resultDiv.innerHTML = `
+    <h4 style="font-weight:600;font-size:.9rem;margin-bottom:.5rem;color:#059669">✅ PPRE généré</h4>
+    <div style="background:#f8fafc;border-radius:8px;padding:1rem;font-size:.85rem;max-height:400px;overflow-y:auto" class="markdown-content">${renderMarkdown(result)}</div>
+    <div style="display:flex;gap:.75rem;margin-top:1rem">
+      <button class="btn btn-primary" style="flex:1" onclick="savePPRE('${studentId}','${escJs(result)}')">💾 Enregistrer le PPRE</button>
+      <button class="btn btn-outline" onclick="document.getElementById('ppre-result').innerHTML=''">Annuler</button>
+    </div>`
+  
+  // Store the generated content for saving
+  window._lastPPRE = { studentId, content: result, context, subject, strengths, goals, duration }
+}
+
+function savePPRE(studentId, content) {
+  const data = window._lastPPRE
+  if (!data) { toast('Erreur: génération introuvable', 'error'); return }
+  
+  const ppre = {
+    id: uid(),
+    studentId,
+    content: data.content,
+    summary: data.content.split('\n').slice(0,3).join(' ').replace(/[*#]/g,'').trim().slice(0,200),
+    context: data.context,
+    subject: data.subject,
+    duration: data.duration,
+    status: 'actif',
+    createdAt: today(),
+    updatedAt: today()
+  }
+  state.ppres.push(ppre)
+  LSS('ppres', state.ppres)
+  toast('PPRE enregistré !')
+  navigate('ppre', ppre.id)
+}
+
+// ================================ PPRE VIEW/EDIT ================================
+function renderPPREdit(id) {
+  const p = state.ppres.find(x => x.id === id)
+  if (!p) { navigate('history'); return }
+  const s = state.students.find(x => x.id === p.studentId)
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:.5rem">
+      <div>
+        <a href="#" onclick="navigate('${s ? 'student' : 'history'}','${s ? s.id : ''}');return false" style="font-size:.8rem;color:#1a56b0;text-decoration:none">← ${s ? s.name : 'Historique'}</a>
+        <h1 style="margin-top:.25rem">PPRE du ${fmtDate(p.createdAt)}</h1>
+        <p>${s ? s.name+' · '+s.level : '—'} · <span class="badge ${p.status === 'actif' ? 'badge-green' : p.status === 'terminé' ? 'badge-blue' : 'badge-yellow'}">${p.status||'brouillon'}</span></p>
+      </div>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-outline btn-sm" onclick="exportPDF('${p.id}')">📄 PDF</button>
+        <button class="btn btn-primary btn-sm" onclick="editPPRE('${p.id}')">✎ Modifier</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePPRE('${p.id}')">🗑</button>
+      </div>
+    </div>
+    <div class="card markdown-content">${renderMarkdown(p.content)}</div>`
+}
+
+function editPPRE(id) {
+  const p = state.ppres.find(x => x.id === id)
+  if (!p) return
+  const overlay = document.createElement('div')
+  overlay.className = 'modal-overlay'
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:700px">
+      <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem">Modifier le PPRE</h2>
+      <div><label>Contenu</label><textarea id="edit-content" rows="15" style="font-family:monospace;font-size:.8rem">${escHtml(p.content)}</textarea></div>
+      <div style="display:flex;gap:.75rem;margin-top:1rem">
+        <button class="btn btn-primary" style="flex:1" onclick="updatePPRE('${id}')">💾 Enregistrer</button>
+        <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Annuler</button>
+      </div>
+    </div>`
+  document.body.appendChild(overlay)
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove() })
+}
+
+function updatePPRE(id) {
+  const content = document.getElementById('edit-content')?.value.trim()
+  if (!content) { toast('Contenu vide', 'error'); return }
+  const idx = state.ppres.findIndex(p => p.id === id)
+  if (idx >= 0) {
+    state.ppres[idx].content = content
+    state.ppres[idx].summary = content.split('\n').slice(0,3).join(' ').replace(/[*#]/g,'').trim().slice(0,200)
+    state.ppres[idx].updatedAt = today()
+    LSS('ppres', state.ppres)
+    document.querySelector('.modal-overlay')?.remove()
+    toast('PPRE mis à jour')
+    render()
+  }
+}
+
+function deletePPRE(id) {
+  if (!confirm('Supprimer ce PPRE ?')) return
+  state.ppres = state.ppres.filter(p => p.id !== id)
+  LSS('ppres', state.ppres)
+  toast('PPRE supprimé')
+  navigate('history')
+}
+
+// ================================ HISTORY ================================
+function renderHistory() {
+  const ppres = [...state.ppres].reverse()
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header"><h1>Historique</h1><p>${ppres.length} PPRE rédigé${ppres.length > 1 ? 's' : ''}</p></div>
+    ${ppres.length === 0 ? '<div class="empty-state"><p>Aucun PPRE pour le moment</p></div>' :
+      ppres.map(p => {
+        const s = state.students.find(x => x.id === p.studentId)
+        return `<div class="card" style="margin-bottom:.6rem;cursor:pointer" onclick="navigate('ppre','${p.id}')">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <strong>${s ? s.name : 'Élève supprimé'}</strong>
+              <span style="font-size:.8rem;color:#64748b;margin-left:.5rem">· ${fmtDate(p.createdAt)}</span>
+              <span class="badge ${p.status === 'actif' ? 'badge-green' : p.status === 'terminé' ? 'badge-blue' : 'badge-yellow'}" style="margin-left:.4rem">${p.status||'brouillon'}</span>
+            </div>
+            <button class="btn btn-outline btn-sm">Voir</button>
+          </div>
+          ${p.subject ? `<div style="font-size:.8rem;color:#64748b;margin-top:.3rem">📚 ${p.subject}</div>` : ''}
+        </div>`
+      }).join('')
+    }`
+}
+
+// ================================ VADEMECUM ================================
+async function renderVademecum() {
+  const hasAI = !!state.apiKey
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:.5rem">
+      <div><h1>Vademecum</h1><p>Guide pour la rédaction des PPRE</p></div>
+      ${hasAI ? '<button class="btn btn-gold btn-sm" onclick="generateVademecum()" id="vade-btn">✨ Adapter au cycle avec l\'IA</button>' : ''}
+    </div>
+    <div class="card markdown-content" id="vade-content">${renderMarkdown(vademecumContent)}</div>`
+}
+
+async function generateVademecum() {
+  const btn = document.getElementById('vade-btn')
+  if (!btn) return
+  btn.disabled = true
+  btn.innerHTML = '<span class="spinner"></span> Génération…'
+  
+  const result = await callGroq([
+    { role: 'system', content: 'Tu es un enseignement spécialisé expert.' },
+    { role: 'user', content: 'Rédige un guide pratique (vademecum) pour les enseignants qui rédigent des PPRE en SEGPA et en REP+. Inclus : 1) Qu\'est-ce qu\'un PPRE, 2) Les étapes de rédaction, 3) Conseils pour les objectifs, 4) Exemples d\'activités par matière, 5) Lien avec le livret scolaire, 6) Communication avec les familles. Sois concret et pratique.' }
+  ])
+  
+  btn.disabled = false
+  btn.innerHTML = '✨ Adapter avec l\'IA'
+  
+  if (!result) return
+  document.getElementById('vade-content').innerHTML = renderMarkdown(result)
+}
+
+// ================================ SETTINGS ================================
+function renderSettings() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-header"><h1>Réglages</h1><p>Configuration de l'application</p></div>
+    <div class="card" style="margin-bottom:1rem">
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:1rem">🔑 Clé API Groq</h3>
+      <p style="font-size:.85rem;color:#64748b;margin-bottom:1rem">Requis pour la génération IA des PPRE. Obtiens ta clé gratuite sur <a href="https://console.groq.com/keys" target="_blank" style="color:#1a56b0">console.groq.com</a></p>
+      <div style="display:flex;gap:.75rem">
+        <input type="password" id="api-key-input" value="${state.apiKey}" placeholder="gsk_votre_clé_ici" style="flex:1;font-family:monospace" />
+        <button class="btn btn-primary" onclick="saveApiKey()">💾 Sauvegarder</button>
+      </div>
+      ${state.apiKey ? '<p style="color:#059669;font-size:.8rem;margin-top:.5rem">✅ Clé configurée</p>' : '<p style="color:#e59c1a;font-size:.8rem;margin-top:.5rem">⚠ Aucune clé configurée</p>'}
+    </div>
+    <div class="card">
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:1rem">📊 Données</h3>
+      <p style="font-size:.85rem;color:#64748b;margin-bottom:.75rem">${state.students.length} élèves · ${state.ppres.length} PPRE — Tout est stocké localement dans ce navigateur.</p>
+      <button class="btn btn-outline btn-sm" onclick="exportData()">📥 Exporter les données</button>
+      <button class="btn btn-danger btn-sm" onclick="resetData()" style="margin-left:.5rem">🗑 Réinitialiser</button>
+    </div>
+    <div class="card" style="margin-top:1rem">
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:1rem">👤 Compte</h3>
+      <p style="font-size:.85rem;color:#64748b">Connecté en tant que <strong>${state.user.email}</strong></p>
+      <button class="btn btn-outline btn-sm" onclick="logout()" style="margin-top:.5rem">Déconnexion</button>
+    </div>`
+}
+
+function saveApiKey() {
+  const key = document.getElementById('api-key-input')?.value.trim()
+  if (!key) { toast('Entre une clé valide', 'error'); return }
+  state.apiKey = key
+  LSS('apiKey', key)
+  toast('Clé API sauvegardée')
+  render()
+}
+
+function exportData() {
+  const data = { students: state.students, ppres: state.ppres, exportedAt: today() }
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = 'altius-ppre-export-'+today()+'.json'
+  a.click()
+  toast('Données exportées')
+}
+
+function resetData() {
+  if (!confirm('⚠ Réinitialiser toutes les données ? Cette action est irréversible.')) return
+  if (!confirm('Confirmer : tous les élèves et PPRE seront supprimés.')) return
+  state.students = []
+  state.ppres = []
+  LSS('students', [])
+  LSS('ppres', [])
+  toast('Données réinitialisées')
+  render()
+}
+
+// ================================ HELPERS ================================
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+function escJs(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/"/g,'\\"') }
+
+function renderMarkdown(text) {
+  if (!text) return ''
+  // Bold, italic
+  let h = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>')
+  // Headings
+  h = h.replace(/^#### (.*$)/gm, '<h4>$1</h4>').replace(/^### (.*$)/gm, '<h3>$1</h3>').replace(/^## (.*$)/gm, '<h2 style="font-size:1.1rem;font-weight:600;margin:1rem 0 .4rem">$1</h2>').replace(/^# (.*$)/gm, '<h1 style="font-size:1.2rem;font-weight:700;margin:1rem 0 .4rem">$1</h1>')
+  // Lists
+  h = h.replace(/^- (.*$)/gm, '<li>$1</li>').replace(/(<li>.*<\/li>\n?)+/g, '<ul style="padding-left:1.25rem;margin:.4rem 0">$&</ul>')
+  // Numbered lists
+  h = h.replace(/^(\d+)\. (.*$)/gm, '<li value="$1">$2</li>')
+  // Paragraphs (double newlines)
+  h = h.replace(/\n\n/g, '</p><p style="margin:.6rem 0">')
+  // Single newlines
+  h = h.replace(/\n/g, '<br>')
+  return '<p style="margin:.6rem 0">'+h+'</p>'
+}
+
+// ================================ PDF EXPORT ================================
+function exportPDF(ppreId) {
+  const p = state.ppres.find(x => x.id === ppreId)
+  if (!p) { toast('PPRE introuvable', 'error'); return }
+  const s = state.students.find(x => x.id === p.studentId)
+  
+  try {
+    const { jsPDF } = window.jspdf
+    const doc = new jsPDF({ format: 'a4', unit: 'mm' })
+    const pageW = doc.internal.pageSize.getWidth()
+    
+    // Header
+    doc.setFillColor(10, 42, 84)
+    doc.rect(0, 0, pageW, 35, 'F')
+    doc.setTextColor(245, 200, 71)
+    doc.setFontSize(18)
+    doc.text('▲ Altius PPRE', 14, 15)
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(10)
+    doc.text('Programme Personnalisé de Réussite Éducative', 14, 24)
+    
+    // Info
+    doc.setTextColor(30, 41, 59)
+    doc.setFontSize(10)
+    let y = 45
+    if (s) {
+      doc.text('Élève : ' + s.name, 14, y)
+      doc.text('Classe : ' + (s.level || s.class || '—'), 14, y + 5)
+      doc.text('Date : ' + fmtDate(p.createdAt), 14, y + 10)
+      doc.text('Statut : ' + (p.status || 'brouillon'), 14, y + 15)
+      y += 25
+    }
+    
+    // Content (strip markdown)
+    const plainText = p.content.replace(/\*\*/g, '').replace(/\*/g, '').replace(/#/g, '').trim()
+    
+    doc.setFontSize(11)
+    const lines = doc.splitTextToSize(plainText, pageW - 28)
+    let remaining = [...lines]
+    
+    while (remaining.length > 0) {
+      // Check if we need a new page
+      if (y > 270) {
+        doc.addPage()
+        y = 25
+      }
+      
+      const chunk = remaining.slice(0, Math.min(remaining.length, Math.floor((270 - y) / 5.5)))
+      remaining = remaining.slice(chunk.length)
+      
+      chunk.forEach(line => {
+        if (y > 270) {
+          doc.addPage()
+          y = 25
+        }
+        // Detect headings
+        if (line.match(/^[A-ZÉÈÊËÎÔÛ0-9]/)) {
+          doc.setFontSize(12)
+          doc.setFont('helvetica', 'bold')
+        } else {
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'normal')
+        }
+        doc.text(line, 14, y)
+        y += 5.5
+      })
+      
+      if (remaining.length > 0) y += 5
+    }
+    
+    // Footer
+    const totalPages = doc.internal.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.setTextColor(148, 163, 184)
+      doc.text('Altius PPRE · Généré le ' + today(), 14, 285)
+      doc.text('Page ' + i + '/' + totalPages, pageW - 30, 285)
+    }
+    
+    doc.save('PPRE-' + (s ? s.name.replace(/\s+/g,'-') : '') + '-' + p.createdAt + '.pdf')
+    toast('PDF téléchargé')
+  } catch(e) {
+    toast('Erreur PDF : ' + e.message, 'error')
+    console.error(e)
+  }
+}
+
+// ================================ VADEMECUM CONTENT ================================
+const vademecumContent = `**QUEST-CE QU'UN PPRE ?**
+
+Le Programme Personnalisé de Réussite Éducative (PPRE) est un dispositif d'accompagnement pédagogique destiné aux élèves qui rencontrent des difficultés scolaires. Il est mis en place par l'équipe pédagogique pour une durée déterminée (généralement 6 à 12 semaines).
+
+**CADRE RÉGLEMENTAIRE**
+
+Le PPRE s'inscrit dans la loi d'orientation et de programmation pour la refondation de l'École (2013). Il concerne tous les élèves dont les difficultés risquent de compromettre la maîtrise du socle commun de compétences.
+
+**LES 5 ÉTAPES DE RÉDACTION**
+
+1. **Constat** — Analyser les difficultés spécifiques de l'élève (repérage des besoins)
+2. **Objectifs prioritaires** — Définir 3 à 5 objectifs concrets et mesurables
+3. **Activités** — Proposer des activités adaptées et des modalités d'accompagnement
+4. **Évaluation** — Définir des critères de réussite et des échéances
+5. **Bilan** — Faire le point à mi-parcours et en fin de dispositif
+
+**CONSEILS POUR DES OBJECTIFS EFFICACES**
+
+- Utilise des verbes d'action : "être capable de", "savoir", "maîtriser"
+- Sois précis : "lire 30 mots par minute" plutôt que "mieux lire"
+- Adapte au niveau réel de l'élève (pas à son niveau de classe)
+- Limite à 3-5 objectifs maximum
+- Privilégie les petits pas : mieux vaut un petit objectif atteint qu'un grand objectif abandonné
+
+**EXEMPLES D'ACTIVITÉS PAR CYCLE**
+
+**Cycle 2 (CP-CE1)** : Ateliers de manipulation, jeux phonologiques, dictées muettes, lecture guidée
+**Cycle 3 (CE2-CM2)** : Groupes de besoin, ateliers de négociation orthographique, problèmes ouverts, cartes mentales
+**Cycle 4 (6ème-3ème)** : Tutorat entre pairs, méthodologie, fiches-outils, auto-évaluation
+**SEGPA** : Approche concrète, projets interdisciplinaires, pédagogie de l'alternance, stages découverte
+
+**LIEN AVEC LE LIVRET SCOLAIRE**
+
+Le PPRE alimente le LSU/LSL (Livret Scolaire Unique/Livret Scolaire du Lycée). Les objectifs atteints peuvent être valorisés dans les bilans périodiques.
+
+**COMMUNICATION AVEC LA FAMILLE**
+
+- Informer la famille dès la mise en place du PPRE
+- Proposer des pistes d'accompagnement à la maison
+- Valoriser les progrès, même minimes
+- Organiser un point d'étape à mi-parcours`
+
+// ================================ MOBILE MENU ================================
+function toggleMobileMenu() {
+  const sidebar = document.getElementById('sidebar')
+  sidebar.classList.toggle('hidden')
+  if (!sidebar.classList.contains('hidden')) {
+    sidebar.style.display = 'flex'
+    sidebar.style.position = 'fixed'
+    sidebar.style.zIndex = '1000'
+    sidebar.style.width = '100%'
+    sidebar.style.flexDirection = 'column'
+    // Add close button
+    if (!document.getElementById('mobile-close')) {
+      const close = document.createElement('div')
+      close.id = 'mobile-close'
+      close.style.cssText = 'padding:.75rem 1.25rem;text-align:right;border-bottom:1px solid rgba(255,255,255,.08)'
+      close.innerHTML = '<button onclick="toggleMobileMenu()" style="background:none;border:none;color:#94a3b8;font-size:1.2rem;cursor:pointer">✕</button>'
+      sidebar.insertBefore(close, sidebar.firstChild)
+    }
+  } else {
+    sidebar.style.display = ''
+    sidebar.style.position = ''
+    sidebar.style.zIndex = ''
+    sidebar.style.width = ''
+    sidebar.style.flexDirection = ''
+    document.getElementById('mobile-close')?.remove()
+  }
+}
+
+// ================================ HASH ROUTING ================================
+window.addEventListener('hashchange', render)
+
+// ================================ INIT ================================
+loadState()
+render()
+</script>
+</body>
+</html>
