@@ -186,7 +186,7 @@ function updateUI() {
 }
 
 // ================================ GROQ API ================================
-async function callGroq(messages, model = 'deepseek-r1-distill-llama-70b') {
+async function callGroq(messages, model = 'llama-3.3-70b-versatile') {
   if (!state.apiKey) { toast('Configure ta clé API Groq dans Réglages', 'error'); return null }
   try {
     const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
